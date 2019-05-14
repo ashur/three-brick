@@ -72,34 +72,24 @@ router.post( '/', authenticate, (request, response) =>
  *
  * This endpoint is authenticated because it causes a write.
  */
+router.get( '/random.txt', authenticate, (request, response) =>
+{
+	let palette = getRandomPalette();
+	let result = `# ${palette.name}\n#\n${palette.background},${palette.middle},${palette.foreground}`;
+
+	response
+		.type( 'text/text' )
+		.send( result );
+});
+
+/**
+ * GET /api/palettes/random
+ *
+ * This endpoint is authenticated because it causes a write.
+ */
 router.get( '/random', authenticate, (request, response) =>
 {
-	let filterSkipped = palette =>
-	{
-		return palette.skipUntil < Date.now();
-	};
-
-	let randomPalette = getRandomPalette( filterSkipped );
-	if( randomPalette === undefined )
-	{
-		db.get( 'palettes' )
-			.value()
-			.forEach( palette =>
-			{
-				db.get( 'palettes' )
-					.find( { id: palette.id } )
-					.assign( { skipUntil: 0 } )
-					.write();
-			});
-
-		randomPalette = getRandomPalette();
-	}
-
-	let skipUntil = Date.now() + (60 * 60 * 24 * 7);
-	db.get( 'palettes' )
-		.find( { id: randomPalette.id } )
-		.assign( { skipUntil: skipUntil } )
-		.write();
+	let randomPalette = getRandomPalette();
 
 	response.json( randomPalette );
 });
@@ -181,10 +171,40 @@ router.delete( '/:id', authenticate, (request, response) =>
  */
 function getRandomPalette( filter )
 {
-	return db.get( 'palettes' )
-		.filter( filter )
+	let filterSkipped = palette =>
+	{
+		return palette.skipUntil < Date.now();
+	};
+
+	let randomPalette = db.get( 'palettes' )
+		.filter( filterSkipped )
 		.sample()
 		.value();
+
+	if( randomPalette === undefined )
+	{
+		db.get( 'palettes' )
+			.value()
+			.forEach( palette =>
+			{
+				db.get( 'palettes' )
+					.find( { id: palette.id } )
+					.assign( { skipUntil: 0 } )
+					.write();
+			});
+
+		randomPalette = db.get( 'palettes' )
+			.sample()
+			.value();
+	}
+
+	let skipUntil = Date.now() + (60 * 60 * 24 * 7);
+	db.get( 'palettes' )
+		.find( { id: randomPalette.id } )
+		.assign( { skipUntil: skipUntil } )
+		.write();
+
+	return randomPalette;
 }
 
 module.exports = router;
