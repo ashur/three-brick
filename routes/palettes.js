@@ -32,6 +32,43 @@ router.get( '/', (request, response) =>
 });
 
 /**
+ * POST /api/palettes
+ */
+router.post( '/', authenticate, (request, response) =>
+{
+	try
+	{
+		['name', 'foreground', 'middle', 'background'].forEach( requiredParam =>
+		{
+			if( request.body[requiredParam] === undefined || request.body[requiredParam] === null )
+			{
+				throw new Error( `Missing required parameter '${requiredParam}'` );
+			}
+		});
+
+		let newPalette = {
+			id: shortid.generate(),
+			name: request.body.name,
+			foreground: request.body.foreground,
+			middle: request.body.middle,
+			background: request.body.background,
+			skipUntil: 0,
+		};
+
+		db.get( 'palettes' )
+			.push( newPalette )
+			.write();
+
+		response.send( newPalette );
+	}
+	catch( error )
+	{
+		console.log( error );
+		response.json( { error: error.message } );
+	}
+});
+
+/**
  * GET /api/palettes/random
  *
  * This endpoint is authenticated because it causes a write.
@@ -110,42 +147,6 @@ router.delete( '/:id', authenticate, (request, response) =>
 	}
 });
 
-/**
- * POST /api/palettes
- */
-router.post( '/', authenticate, (request, response) =>
-{
-	try
-	{
-		['name', 'foreground', 'middle', 'background'].forEach( requiredParam =>
-		{
-			if( request.body[requiredParam] === undefined || request.body[requiredParam] === null )
-			{
-				throw new Error( `Missing required parameter '${requiredParam}'` );
-			}
-		});
-
-		let newPalette = {
-			id: shortid.generate(),
-			name: request.body.name,
-			foreground: request.body.foreground,
-			middle: request.body.middle,
-			background: request.body.background,
-			skipUntil: 0,
-		};
-
-		db.get( 'palettes' )
-			.push( newPalette )
-			.write();
-
-		response.send( newPalette );
-	}
-	catch( error )
-	{
-		console.log( error );
-		response.json( { error: error.message } );
-	}
-});
 
 /**
  * @param [{Function}]
