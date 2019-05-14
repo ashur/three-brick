@@ -3,7 +3,6 @@ const bodyParser = require( 'body-parser' );
 const express = require( 'express' );
 const FileSync = require( 'lowdb/adapters/FileSync' );
 const low = require( 'lowdb' );
-const Palette = require( '../src/palette' );
 const router = express.Router();
 const shortid = require( 'shortid' );
 
