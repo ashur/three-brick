@@ -105,24 +105,62 @@ router.get( '/random', authenticate, (request, response) =>
 });
 
 /**
+ * Single palette endpoints
+ *
+ * - GET
+ * - PUT
+ * - DELETE
+ */
+
+let palette;
+
+router.param( 'id', (request, response, next, id)=>
+{
+	palette = db.get( 'palettes' )
+		.find({ id: request.params.id })
+		.value();
+
+	if( palette === undefined )
+	{
+		response.status( 404 )
+			.json( { error: 'Palette not found' } );
+	}
+	else
+	{
+		next();
+	}
+});
+
+/**
  * GET /api/palettes/:id
  */
 router.get( '/:id', (request, response) =>
 {
-	let palette = db.get( 'palettes' )
-		.find({ id: request.params.id })
-		.value();
+	response.json( palette );
+});
 
-	if( palette !== undefined )
+/**
+ * PUT /api/palettes/:id
+ */
+router.put( '/:id', authenticate, (request, response) =>
+{
+	let newProperties = {};
+	let writableProperties = ['name', 'foreground', 'middle', 'background', 'skipUntil'];
+
+	writableProperties.forEach( property =>
 	{
-		response.json( palette );
-	}
-	else
-	{
-		response
-			.status( 404 )
-			.json( { error: 'Palette not found' } );		
-	}
+		if( request.body[property] )
+		{
+			newProperties[property] = request.body[property];
+		}
+	});
+
+	let updatedPalette = db.get( 'palettes' )
+		.find( { id: palette.id } )
+		.assign( newProperties )
+		.write();
+
+	response.send( updatedPalette );
 });
 
 /**
@@ -130,20 +168,11 @@ router.get( '/:id', (request, response) =>
  */
 router.delete( '/:id', authenticate, (request, response) =>
 {
-	let result = db.get( 'palettes' )
-		.remove({ id: request.params.id })
+	db.get( 'palettes' )
+		.remove({ id: palette.id })
 		.write();
 
-	if( result.length > 0 )
-	{
-		response.json( result );
-	}
-	else
-	{
-		response
-			.status( 404 )
-			.json( { error: 'Palette not found' } );
-	}
+	response.json( palette );
 });
 
 
